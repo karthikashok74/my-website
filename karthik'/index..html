@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aranmula Metal Mirror</title>
+<style>
+/* ---------------- reset & basics ---------------- */
+* { margin:0; padding:0; box-sizing:border-box; font-family:"Poppins",sans-serif; scroll-behavior:smooth; }
+img { display:block; max-width:100%; }
+
+/* ---------------- body & theme ---------------- */
+body {
+  background: linear-gradient(145deg, #000000, #d4af37);
+  color:#fff; line-height:1.6; overflow-x:hidden;
+  opacity:0; transition:opacity 0.9s ease-in-out;
+}
+body.loaded { opacity:1; }
+
+header {
+  background-color: rgba(0,0,0,0.85);
+  position: fixed; top:0; left:0; right:0; width:100%; z-index:1000;
+  padding:14px 28px; display:flex; gap:20px; align-items:center;
+  justify-content:space-between; box-shadow:0 2px 12px rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+}
+header h1 { color:#d4af37; font-size:1.6rem; font-weight:800; letter-spacing:1px; }
+nav { display:flex; align-items:center; gap:12px; }
+nav a {
+  color:#fff; text-decoration:none; padding:6px 8px; border-radius:6px;
+  transition:color 0.25s, background 0.25s;
+  font-weight:600; font-size:0.95rem;
+}
+nav a:hover { color:#000; background:#ffd700; }
+nav a.active { color:#000; background:#ffd700; }
+
+.hamburger { display:none; cursor:pointer; gap:4px; flex-direction:column; }
+.hamburger div { width:26px; height:3px; background:#ffd700; border-radius:2px; }
+
+.hero {
+  height:80vh; display:flex; flex-direction:column; justify-content:center; align-items:center;
+  text-align:center; padding:120px 20px 60px; animation:fadeInUp 1s ease both;
+}
+.hero h2 { font-size:3rem; color:#ffd700; font-weight:800; margin-bottom:12px; letter-spacing:1px; }
+.hero p { font-size:1.15rem; color:rgba(255,255,255,0.95); max-width:900px; }
+
+.section { padding:80px 20px; max-width:1200px; margin:0 auto 30px; }
+.section h2 { text-align:center; font-size:2.1rem; margin-bottom:34px; color:#ffd700; text-transform:uppercase; letter-spacing:2px; }
+
+.products { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:28px; }
+.product {
+  background:rgba(255,255,255,0.05); border-radius:14px; overflow:hidden;
+  box-shadow:0 8px 30px rgba(0,0,0,0.6); transition:transform 0.45s cubic-bezier(.2,.9,.2,1), box-shadow 0.3s, opacity 0.6s;
+  transform:translateY(40px) scale(0.98); opacity:0; border:1px solid rgba(255,215,0,0.12); cursor:default;
+  position:relative;
+}
+.product.visible { transform:translateY(0) scale(1); opacity:1; }
+.product:hover { transform:translateY(-6px) scale(1.02); box-shadow:0 18px 40px rgba(0,0,0,0.7); }
+.product img { height:260px; object-fit:cover; width:100%; transition:transform 0.45s ease, filter 0.45s ease; }
+.product:hover img { transform:scale(1.07); filter:brightness(1.12); }
+.product-info { padding:18px; text-align:center; }
+.product-info h3 { margin-bottom:8px; color:#ffd700; font-weight:700; font-size:1.12rem; }
+.product-info p { color:#fff; margin-bottom:12px; font-size:1rem; }
+
+.btn-add, .btn-buy {
+  display:inline-block; margin:6px; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer;
+  position:relative; overflow:hidden; transition:transform 0.2s ease;
+}
+.btn-add { background:#ffd700; color:#000; border:0; }
+.btn-buy { background:transparent; color:#ffd700; border:2px solid #ffd700; }
+.btn-add:hover, .btn-buy:hover { transform:translateY(-4px); }
+.btn-add::before, .btn-buy::before {
+  content:""; position:absolute; top:0; left:-120%; width:60%; height:100%;
+  background:linear-gradient(120deg, rgba(255,255,255,0.7), rgba(255,255,255,0)); transform:skewX(-25deg);
+}
+.btn-add:hover::before, .btn-buy:hover::before { animation:shine 0.95s forwards; }
+@keyframes shine { 0% { left:-120%; } 100% { left:220%; } }
+
+.lightbox {
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.94); padding:28px; gap:20px; z-index:9999;
+  opacity:0; visibility:hidden; transform:scale(.96); transition:all 0.28s ease;
+}
+.lightbox.active { opacity:1; visibility:visible; transform:scale(1); }
+.lightbox .lb-img { max-width:45%; max-height:80vh; border-radius:10px; object-fit:cover; }
+.lightbox .lightbox-info { max-width:45%; color:#ffd700; display:flex; flex-direction:column; gap:12px; }
+.lightbox .lightbox-info h3 { font-size:1.8rem; color:#ffd700; margin:0; }
+.lightbox .lightbox-info p { color:#ffd700; opacity:0.95; font-size:1rem; }
+.lightbox .arrow { position:absolute; top:50%; transform:translateY(-50%); font-size:2rem; color:#ffd700; cursor:pointer; user-select:none; }
+.lightbox .left { left:22px; } .lightbox .right{ right:22px; }
+
+.cart-icon {
+  position: fixed; bottom:20px; right:20px; width:60px; height:60px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; z-index:2000; cursor:pointer;
+  background:#ffd700; color:#000; font-size:1.4rem; box-shadow:0 8px 18px rgba(0,0,0,0.45); transform:translateY(0);
+  opacity:0; pointer-events:none; transition:opacity 0.25s, transform 0.2s;
+}
+.cart-icon.show { opacity:1; pointer-events:auto; animation:pulse 1.6s infinite; }
+.cart-icon:hover { transform:translateY(-6px); }
+.cart-count { position:absolute; top:6px; right:8px; background:#000; color:#fff; padding:4px 7px; font-weight:800; border-radius:50%; font-size:0.76rem; box-shadow:0 3px 8px rgba(0,0,0,0.5); }
+
+#scrollTop {
+  position:fixed; bottom:90px; right:25px; z-index:1500; display:none; cursor:pointer;
+  background:#000; border:2px solid #ffd700; color:#ffd700; padding:10px; border-radius:50%;
+  font-size:1.1rem; box-shadow:0 8px 20px rgba(0,0,0,0.5);
+}
+#scrollTop.show { display:block; }
+
+.contact { display:flex; flex-direction:column; gap:18px; max-width:650px; margin:0 auto; font-weight:700; }
+.contact input, .contact textarea {
+  padding:14px; border-radius:10px; border:2px solid #ffd700; background:rgba(255,255,255,0.04); color:#ffd700;
+  font-size:1rem; font-weight:700; transition:box-shadow 0.2s, border-color 0.2s;
+}
+.contact input:focus, .contact textarea:focus { outline:none; border-color:#fff; box-shadow:0 6px 20px rgba(0,0,0,0.5); color:#fff; background:rgba(255,255,255,0.06); }
+.contact textarea { min-height:140px; resize:none; }
+
+footer { background:rgba(0,0,0,0.85); text-align:center; color:#fff; padding:28px 12px; margin-top:40px; border-top:1px solid rgba(255,215,0,0.12); }
+
+@keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+@keyframes pulse { 0% { box-shadow:0 0 8px rgba(255,215,0,0.6); } 50% { box-shadow:0 0 28px rgba(255,215,0,0.9); } 100% { box-shadow:0 0 8px rgba(255,215,0,0.6); } }
+
+@media (max-width: 900px) {
+  .hero h2 { font-size:2.2rem; }
+  .product img { height:220px; }
+}
+@media (max-width:768px){
+  header { padding:12px 18px; }
+  .hamburger { display:flex; }
+  nav { position:fixed; top:66px; right:0; left:0; display:none; flex-direction:column; gap:0; background:rgba(0,0,0,0.96); padding:20px 16px; }
+  nav.active { display:flex; }
+  nav a { margin:8px 0; font-size:1.05rem; padding:12px; text-align:center; }
+  .lightbox { padding:12px; gap:12px; }
+  .lightbox .lb-img, .lightbox .lightbox-info { max-width:100%; }
+  .lightbox .arrow { display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Cart + Scroll top -->
+<div class="cart-icon" id="cartIcon" title="View cart" onclick="goToCart()">
+  🛒
+  <span class="cart-count" id="cartCount">0</span>
+</div>
+<button id="scrollTop" title="Scroll to top" onclick="scrollToTop()">⬆</button>
+
+<!-- Header -->
+<header>
+  <h1>Aranmula Metal Mirror</h1>
+
+  <div class="hamburger" id="hamburger" aria-label="Toggle menu" title="Menu">
+    <div></div><div></div><div></div>
+  </div>
+
+  <nav id="navMenu">
+    <a href="#home" class="nav-link">Home</a>
+    <a href="#products" class="nav-link">Products</a>
+    <a href="#contact" class="nav-link">Contact</a>`
+  </nav>
+</header>
+
+<!-- Hero -->
+<section id="home" class="hero" aria-label="home">
+  <h2>Aranmula Metal Mirrors</h2>
+  <p>Handcrafted metal mirrors with timeless elegance — traditional Kerala craftsmanship meets premium finishing.</p>
+</section>
+
+<!-- Products -->
+<section id="products" class="section" aria-label="products">
+  <h2>Our Products</h2>
+  <div class="products" id="productList" aria-live="polite"></div>
+
+  <div style="text-align:center; margin-top:28px;">
+    <button class="btn-add" onclick="window.location.href='all-products.html'">View All Products</button>
+  </div>
+</section>
+
+<!-- Description Section -->
+<section id="description" class="section">
+  <h2>About Aranmula Metal Mirror</h2>
+
+  <div class="desc-container">
+    <div class="desc-text">
+      <h3>The Legendary Aranmula Kannadi</h3>
+      <p>
+        The Aranmula Metal Mirror, known as <strong>Aranmula Kannadi</strong>, is a
+        unique and ancient craft of Kerala. Unlike ordinary glass mirrors, this
+        mirror is made from a special metal alloy polished for several days to
+        achieve a crystal-clear reflection.
+      </p>
+      <p>
+        Each mirror is handcrafted by skilled artisans using a technique passed
+        down through generations. This makes every piece a symbol of luck, purity,
+        and tradition.
+      </p>
+    </div>
+
+    <div class="desc-images">
+      <img src="pho1.jpg.jpg" alt="Mirror Craft">
+      <img src="pho5.jpg" alt="Artisan Work">
+      <img src="pho3.jpg" alt="Traditional Mirror">
+    </div>
+  </div>
+</section>
+
+<style>
+/* -------- Description Section Styling -------- */
+#description h2 {
+  color: #ffd700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.desc-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px;
+  align-items: center;
+  justify-content: center;
+}
+
+.desc-text {
+  flex: 1;
+  min-width: 300px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 25px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+  backdrop-filter: blur(6px);
+  transition: transform 0.4s ease;
+}
+
+.desc-text:hover {
+  transform: translateY(-6px);
+}
+
+.desc-text h3 {
+  color: #ffd700;
+  margin-bottom: 10px;
+}
+
+.desc-text p {
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+/* ---- Images Grid ---- */
+.desc-images {
+  flex: 1;
+  min-width: 280px;
+  display: grid;
+  gap: 15px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.desc-images img {
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  transition: transform 0.45s ease, box-shadow 0.45s ease, filter 0.45s ease;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+}
+
+/* Hover animation */
+.desc-images img:hover {
+  transform: scale(1.08);
+  filter: brightness(1.15);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .desc-container {
+    flex-direction: column;
+  }
+  .desc-images img {
+    height: 150px;
+  }
+}
+</style>
+
+
+<!-- Contact -->
+<section id="contact" class="section" aria-label="contact">
+  <h2>Contact Us</h2>
+  <form class="contact" onsubmit="event.preventDefault(); handleContact();">
+    <input id="name" type="text" placeholder="Full Name" required />
+    <input id="email" type="email" placeholder="Email Address" required />
+    <input id="phone" type="tel" placeholder="Phone Number" required />
+    <input id="subject" type="text" placeholder="Subject" required />
+    <textarea id="message" placeholder="Your Message"></textarea>
+    <button class="btn-add" type="submit">Send Message</button>
+  </form>
+</section>
+
+<!-- Footer -->
+<footer>
+  <p>&copy; 2025 Aranmula Metal Mirror | KARTHIK | All Rights Reserved</p>
+</footer>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-hidden="true">
+  <span class="arrow left" onclick="prevProduct()" title="Previous product">&#10094;</span>
+  <img class="lb-img" id="lightboxImg" src="" alt="Product image">
+  <div class="lightbox-info" id="lightboxInfo"></div>
+  <button class="btn-buy" id="lightboxBuy" style="position: absolute; bottom:30px; left:50%; transform:translateX(-50%);">Buy Now</button>
+  <span class="arrow right" onclick="nextProduct()" title="Next product">&#10095;</span>
+</div>
+
+<script>
+/* ---------------- page load ---------------- */
+window.addEventListener('load', () => {
+  document.body.classList.add('loaded');
+});
+
+/* ---------------- product data ---------------- */
+/* Update image filenames here if needed */
+const products = [
+  { name: "Handheld Mirror", price: 2750, img: "pho1.jpg.jpg", desc:"Elegant handheld mirror with intricate Kerala craftsmanship." },
+  { name: "Back Stand Mirror", price: 3200, img: "pho2.jpg", desc:"Classic back stand mirror for your bedroom or living space." },
+  { name: "Fixed Stand Mirror", price: 3500, img: "pho3.jpg", desc:"Durable fixed stand mirror with traditional design." },
+  { name: "Traditional Mirror", price: 3100, img: "pho4.jpg", desc:"Heritage-inspired mirror perfect for cultural decor." },
+  { name: "Decorative Mirror", price: 4200, img: "pho5.jpg", desc:"Exquisite decorative mirror to enhance your interiors." },
+  { name: "Luxury Mirror", price: 5000, img: "pho2.jpg", desc:"Premium luxury mirror with gold accents." }
+];
+
+/* ---------------- render product cards (first 3) ---------------- */
+const productList = document.getElementById('productList');
+products.slice(0,3).forEach((p, index) => {
+  const card = document.createElement('div');
+  card.className = 'product';
+  card.innerHTML = `
+    <img src="${p.img}" alt="${p.name}" onclick="openLightbox(${index})" style="cursor:pointer;">
+    <div class="product-info">
+      <h3>${p.name}</h3>
+      <p>₹${p.price.toLocaleString('en-IN')}</p>
+      <div>
+        <button class="btn-add" onclick="event.stopPropagation(); addToCart(${index})">Add to Cart</button>
+        <button class="btn-buy" onclick="event.stopPropagation(); buyNow(${index})">Buy Now</button>
+      </div>
+    </div>
+  `;
+  productList.appendChild(card);
+});
+
+/* ---------------- reveal animation via IntersectionObserver ---------------- */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.2 });
+
+document.querySelectorAll('.product').forEach(el => observer.observe(el));
+
+/* ---------------- cart (localStorage) ---------------- */
+const cartCount = document.getElementById('cartCount');
+const cartIcon = document.getElementById('cartIcon');
+let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+updateCartUI();
+
+function updateCartUI() {
+  // prefer authoritative source: localStorage 'cart' length
+  cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  const count = Array.isArray(cart) ? cart.length : 0;
+  if (cartCount) cartCount.innerText = count;
+  if (cartIcon) {
+    if (count > 0) cartIcon.classList.add('show'); else cartIcon.classList.remove('show');
+  }
+  // also store a simple count key for other logic or pages if needed
+  localStorage.setItem('cart_count', String(count));
+}
+
+// keep old addToCart signature but enhance behavior
+function addToCart(i) {
+  // push product object into localStorage 'cart' array
+  let current = JSON.parse(localStorage.getItem('cart') || '[]');
+  current.push(products[i]);
+  localStorage.setItem('cart', JSON.stringify(current));
+  // notify other tabs by writing a timestamp to a special key
+  localStorage.setItem('cart_last_update', Date.now());
+  updateCartUI();
+  // friendly non-blocking notification
+  enhancedShowToast(`${products[i].name} added to cart`);
+}
+
+// keep buyNow as before (placeholder)
+function buyNow(i) {
+  alert(`Redirecting to payment for: ${products[i].name}`);
+}
+
+// make goToCart navigate to cart.html (non-destructive override)
+function goToCart() {
+  // if you created cart.html, this will navigate there
+  // else it will open a simple modal fallback (we keep navigation)
+  window.location.href = 'cart.html';
+}
+
+/* ---------------- lightbox logic ---------------- */
+let currentLightboxIndex = 0;
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+const lightboxInfo = document.getElementById('lightboxInfo');
+const lightboxBuy = document.getElementById('lightboxBuy');
+
+function openLightbox(index) {
+  currentLightboxIndex = index;
+  updateLightbox();
+  lightbox.classList.add('active');
+  lightbox.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function updateLightbox() {
+  const p = products[currentLightboxIndex];
+  lightboxImg.src = p.img;
+  lightboxImg.alt = p.name;
+  lightboxInfo.innerHTML = `<h3>${p.name}</h3><p>Price: ₹${p.price.toLocaleString('en-IN')}</p><p style="color:rgba(255,215,0,0.9)">${p.desc}</p>`;
+  lightboxBuy.onclick = () => { buyNow(currentLightboxIndex); };
+}
+
+function closeLightbox() {
+  lightbox.classList.remove('active');
+  lightbox.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+function nextProduct() {
+  currentLightboxIndex = (currentLightboxIndex + 1) % products.length;
+  updateLightbox();
+}
+function prevProduct() {
+  currentLightboxIndex = (currentLightboxIndex - 1 + products.length) % products.length;
+  updateLightbox();
+}
+
+lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { if (lightbox.classList.contains('active')) closeLightbox(); }
+  else if (e.key === 'ArrowRight') { if (lightbox.classList.contains('active')) nextProduct(); }
+  else if (e.key === 'ArrowLeft') { if (lightbox.classList.contains('active')) prevProduct(); }
+});
+
+/* ---------------- nav active state on scroll ---------------- */
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = document.querySelectorAll('section[id]');
+window.addEventListener('scroll', () => {
+  const scrollPos = window.pageYOffset || document.documentElement.scrollTop;
+  sections.forEach(sec => {
+    const offsetTop = sec.offsetTop - 120;
+    const offsetBottom = offsetTop + sec.offsetHeight;
+    const id = sec.getAttribute('id');
+    if (scrollPos >= offsetTop && scrollPos < offsetBottom) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const activeLink = document.querySelector(`nav a[href="#${id}"]`);
+      if (activeLink) activeLink.classList.add('active');
+    }
+  });
+
+  if (window.scrollY > 420) document.getElementById('scrollTop').classList.add('show'); 
+  else document.getElementById('scrollTop').classList.remove('show');
+});
+
+document.querySelectorAll('#navMenu a').forEach(a => {
+  a.addEventListener('click', () => { document.getElementById('navMenu').classList.remove('active'); });
+});
+
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('navMenu').classList.toggle('active');
+});
+
+function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+/* ---------------- contact form handling ---------------- */
+function handleContact() {
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const subject = document.getElementById('subject').value.trim();
+  const message = document.getElementById('message').value.trim();
+  showToast('Message sent! Thank you, ' + (name || 'Customer') + '.');
+  document.querySelector('.contact').reset();
+}
+
+/* ---------------- small toast utility (original) ---------------- */
+function showToast(text, time = 1600) {
+  const t = document.createElement('div');
+  t.textContent = text;
+  t.style.position = 'fixed';
+  t.style.left = '50%';
+  t.style.transform = 'translateX(-50%)';
+  t.style.bottom = '24px';
+  t.style.background = 'rgba(0,0,0,0.9)';
+  t.style.color = '#ffd700';
+  t.style.padding = '10px 16px';
+  t.style.border = '1px solid rgba(255,215,0,0.15)';
+  t.style.borderRadius = '8px';
+  t.style.zIndex = '99999';
+  t.style.fontWeight = '700';
+  document.body.appendChild(t);
+  setTimeout(()=> t.style.opacity = '0.01', time - 300);
+  setTimeout(()=> t.remove(), time);
+}
+
+/* ---------------- enhanced toast (keeps style consistency) ---------------- */
+function enhancedShowToast(message, time = 1400) {
+  // small wrapper that uses the same visual style but ensures it doesn't conflict
+  const el = document.createElement('div');
+  el.textContent = message;
+  Object.assign(el.style, {
+    position: 'fixed',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    bottom: '28px',
+    background: 'rgba(0,0,0,0.95)',
+    color: '#ffd700',
+    padding: '10px 16px',
+    border: '1px solid rgba(255,215,0,0.15)',
+    borderRadius: '8px',
+    zIndex: 100000,
+    fontWeight: 800,
+    opacity: 0,
+    transition: 'opacity 0.25s'
+  });
+  document.body.appendChild(el);
+  requestAnimationFrame(()=> el.style.opacity = '1');
+  setTimeout(()=>{ el.style.opacity = '0'; setTimeout(()=> el.remove(), 300); }, time);
+}
+
+/* ---------------- sync across tabs/pages and responsive font scale ---------------- */
+/* 1) Update UI when localStorage 'cart' changes in other tabs */
+window.addEventListener('storage', (e) => {
+  if (e.key === 'cart' || e.key === 'cart_last_update' || e.key === 'cart_count') {
+    updateCartUI();
+  }
+});
+
+/* 2) Ensure cart UI is correct on initial load */
+window.addEventListener('load', () => {
+  updateCartUI();
+});
+
+/* 3) Responsive font-size auto-scaling (no change to your CSS required) */
+function adjustFontSize() {
+  // choose base root font-size depending on viewport width
+  const mobileBreakpoint = 768;
+  const mobileSize = 14; // px
+  const desktopSize = 16; // px
+  const rootSize = window.innerWidth <= mobileBreakpoint ? mobileSize : desktopSize;
+  document.documentElement.style.fontSize = rootSize + 'px';
+}
+window.addEventListener('resize', adjustFontSize);
+window.addEventListener('load', adjustFontSize);
+
+/* 4) Make cart icon clickable (non-destructive — replaces any inline onclick)
+   If you want the icon to NOT navigate, comment out the listener below.
+*/
+(function enableCartIconNavigation(){
+  const el = document.getElementById('cartIcon');
+  if (!el) return;
+  // remove inline onclick if present (non-destructive)
+  try { el.onclick = null; } catch(e){}
+  el.addEventListener('click', (ev) => {
+    // prefer to navigate to cart.html if it exists
+    // If you don't have cart.html, you can create it (I provided an example earlier)
+    window.location.href = 'cart.html';
+  });
+})();
+
+/* 5) Helpful small UI: update cart bubble even if localStorage was modified outside this script */
+updateCartUI();
+
+/* ---------------- small accessibility helpers ---------------- */
+window.addEventListener('DOMContentLoaded', () => {
+  const curHash = location.hash || '#home';
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  const active = document.querySelector(`nav a[href="${curHash}"]`);
+  if (active) active.classList.add('active');
+});
+
+/* ---------------- extra: close mobile nav when clicking outside ---------------- */
+document.addEventListener('click', (e) => {
+  const nav = document.getElementById('navMenu');
+  const ham = document.getElementById('hamburger');
+  if (window.innerWidth <= 768 && nav && ham && !nav.contains(e.target) && !ham.contains(e.target)) {
+    nav.classList.remove('active');
+  }
+});
+</script>
+<!-- ---------------- Customer Care Support ---------------- -->
+<div id="supportButton" title="Customer Care">
+  💬
+</div>
+
+<div id="supportBox">
+  <h3>Customer Care</h3>
+  <p>Need help? Contact us:</p>
+  <ul>
+    <li>📞 <strong>+91 8281570199</strong></li>
+    <li>📧 <strong>support@karthikashok74@gmail.com</strong></li>
+    <li>💬 <a href="https://wa.me/8281570199" target="_blank">Chat on WhatsApp</a></li>
+  </ul>
+  <button id="closeSupport">Close</button>
+</div>
+
+<style>
+#supportButton {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #ffd700;   
+  color: #000;
+  font-size: 1.4rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.45);
+  cursor: pointer;
+  z-index: 2000;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+#supportButton:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.6);
+}
+
+#supportBox {
+  position: fixed;
+  bottom: 100px;
+  left: 20px;
+  width: 280px;
+  background: rgba(0,0,0,0.95);
+  border: 2px solid #ffd700;
+  border-radius: 14px;
+  padding: 20px;
+  color: #ffd700;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+  display: none;
+  z-index: 2100;
+  animation: fadeInUp 0.4s ease both;
+}
+#supportBox h3 {
+  margin-top: 0;
+  font-size: 1.3rem;
+  color: #ffd700;
+}
+#supportBox ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+#supportBox ul li {
+  margin: 8px 0;
+  color: #fff;
+}
+#supportBox a {
+  color: #ffd700;
+  text-decoration: none;
+  font-weight: bold;
+}
+#supportBox a:hover {
+  text-decoration: underline;
+}
+#supportBox button {
+  background: #ffd700;
+  color: #000;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+}
+#supportBox button:hover {
+  background: #fff;
+  color: #000;
+}
+</style>
+
+<script>
+const supportBtn = document.getElementById('supportButton');
+const supportBox = document.getElementById('supportBox');
+const closeSupport = document.getElementById('closeSupport');
+
+supportBtn.addEventListener('click', () => {
+  supportBox.style.display = supportBox.style.display === 'block' ? 'none' : 'block';
+});
+
+closeSupport.addEventListener('click', () => {
+  supportBox.style.display = 'none';
+});
+</script>
+<!-- ---------------- Customer Care Support ---------------- -->
+<div id="supportButton" title="Customer Care">💬</div>
+
+<div id="supportBox">
+  <h3>Customer Care</h3>
+  <p>Need help? Contact us:</p>
+  <ul>
+    <li>📞 <strong>+91 8281570199</strong></li>
+    <li>📧 <strong>support@karthikashok74@gmail.com</strong></li>
+    <li>💬 <a href="https://wa.me/8281570199" target="_blank">Chat on WhatsApp</a></li>
+  </ul>
+  <button id="closeSupport">Close</button>
+</div>
+
+<style>
+#supportButton {
+  position: fixed;
+  bottom: 25px;
+  left: 25px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #ffd700;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  z-index: 5000;
+}
+
+#supportBox {
+  position: fixed;
+  bottom: 95px;
+  left: 25px;
+  width: 260px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 20px;
+  border: 2px solid #ffd700;
+  border-radius: 14px;
+  color: #ffd700;
+  display: none;
+  z-index: 5001;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+}
+
+#supportBox h3 { margin-bottom: 10px; }
+
+#supportBox ul { padding-left: 15px; margin-bottom: 12px; }
+#supportBox li { margin-bottom: 6px; }
+
+#closeSupport {
+  background: #ffd700;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  color: #000;
+}
+</style>
+
+<script>
+document.getElementById("supportButton").addEventListener("click", () => {
+  document.getElementById("supportBox").style.display = "block";
+});
+
+document.getElementById("closeSupport").addEventListener("click", () => {
+  document.getElementById("supportBox").style.display = "none";
+});
+</script>
+
+
+
+</body>
+</html>
